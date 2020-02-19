@@ -55,11 +55,11 @@
 ---
 
 - 어느 토픽을 대상으로 데이터를 가져올지 선언
-- Consumer의 subscirbe() 메서드를 통해 설정
+- Consumer의 subscirbe() 메서드를 통해 설정   
 ![ex_screenshot](./kafka_img/screenshot40.png)
 - 만약, 특정 토픽의 전체 파티션이 아니라 일부 파티션의 데이터만 가져오고 싶다면    
 --> assign() 메서드 사용   
---> key가 존재한다면 아래 그림과 같이 데이터의 순서를 보장하는 데이터 처리 가능
+--> key가 존재한다면 아래 그림과 같이 데이터의 순서를 보장하는 데이터 처리 가능   
 ![ex_screenshot](./kafka_img/screenshot41.png)
 
 ---
@@ -67,14 +67,14 @@
 - 실질적으로 데이터를 가져오는 구문
 - poll() 메서드가 포함된 무한루프   
 - 컨슈머 API의 핵심 로직:   
---> 브로커로부터 연속적으로, 컨슈머가 허락하는 한 많은 데이터를 읽어오는 것
+--> 브로커로부터 연속적으로, 컨슈머가 허락하는 한 많은 데이터를 읽어오는 것   
 ![ex_screenshot](./kafka_img/screenshot42.png)
 - poll() 메서드에서 설정한 시간동안 데이터를 기다림 (위 사진에선 500ms)
 - 0.5초 동안 데이터가 도착하기를 기다리고 이후 코드 실행
 - 0.5초 동안 데이터가 들어오지 않으면, 빈값의 records 변수를 반환
 - 데이터가 있다면 데이터가 존재하는 records 값을 반환
 - records 변수는 데이터 배치로서 레코드의 묶음 list 임   
---> 카프카에서 데이터 처리할때, 가장작은 단위인 records로 나누어 처리
+--> 카프카에서 데이터 처리할때, 가장작은 단위인 records로 나누어 처리   
 ![ex_screenshot](./kafka_img/screenshot43.png)
 - for 구문 내부에서 record 변수의 value() 메서드로 반환된 값이 이전에 producer가 전송한 데이터
 - 위의 사진에선 단순히 특정 토픽에서 가져온 데이터를 println으로 찍어보기만 함
@@ -107,20 +107,36 @@
 
 ---
 - 그런데 만약 컨슈머가 중간에 문제가 생겨 멈춘다면 (파티션 0의 3번 오프셋, 파티션 1의 2번 오프셋 까지 읽고 멈춤)   
---> 해당 컨슈머가 어디까지 읽었는지에 대한 정보는 __consumer_offset에 저장되어 있음
+--> 해당 컨슈머가 어디까지 읽었는지에 대한 정보는 __consumer_offset에 저장되어 있음   
 ![ex_screenshot](./kafka_img/screenshot47.png)
 - 해당 컨슈머를 재실행하면, 중지된 시점을 알고 있으므로, 해당 지점부터 다시 데이터를 읽기 시작함 
 - 컨슈머에 이슈가 발생하더라도, 데이터의 처리 시점을 복구할 수 있음   
---> 고가용성의 특징을 가짐
+--> 고가용성의 특징을 가짐   
 ![ex_screenshot](./kafka_img/screenshot48.png)
 
 ---
 ## Multiple Consumer
-- 컨슈머가 하나일때는 2개의 파티션에서 데이터를 가져감
+- 컨슈머가 하나일때는 2개의 파티션에서 데이터를 가져감   
 ![ex_screenshot](./kafka_img/screenshot50.png)
-- 컨슈머가 2개일때는 각 컨슈머가 각각의 파티션을 할당하여 데이터를 가져가서 처리
+- 컨슈머가 2개일때는 각 컨슈머가 각각의 파티션을 할당하여 데이터를 가져가서 처리   
 ![ex_screenshot](./kafka_img/screenshot51.png)
 - 컨슈머가 3개일때는, 이미 파티션들이 각 컨슈머에 할당되었기 때문에   
 --> 더이상할당될 파티션이 없어 동작하지 않음   
---> Consumer의 개수는 partition 개수보다 적거나 같아야 함
+--> Consumer의 개수는 partition 개수보다 적거나 같아야 함   
 ![ex_screenshot](./kafka_img/screenshot49.png)
+
+---
+## Different Groups
+- 컨슈머 그룹이 다른 컨슈머들의 동작
+- 각기 다른 컨슈머 그룹의 컨슈머들은, 다른 컨슈머 그룹에 영향을 미치지 않음
+
+![ex_screenshot](./kafka_img/screenshot52.png)
+
+- 데이터 실시간 시각화 및 분석을 위에 Elasticsearch에 데이터를 저장하는 역할을 하는 Consumer group1과 
+- 데이터 백업 용도로 hadoop에 데이터를 저장하는 Consumer group2가 있다고 가정
+- 엘라스틱 서치에 데이터를 저장하는 consumer group1이 각 파티션에 특정 offset을 읽고 있어도    
+  --> hadoop에 저장하는 역할을 하는 consumer group2가 데이터를 읽는데 영향미치지 않음
+- **컨슈머 그룹별로, 토픽별로 offset을 나누어 저장하기 떄문!**
+- 하나의 토픽으로 들어온 데이터가   
+  --> ***다양한 역할을 하는 여러 컨슈머들이 각자 원하는 데이터로 처리될 수 있게 해줌***   
+** 각기 다른 컨슈머들이 동일한 토픽/파티션에서 데이터를 각기 다른 목적을 위해 가져갈 수 있음
